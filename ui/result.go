@@ -6,23 +6,17 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/twentyone/twentyone/game"
+	"github.com/twentyone/twentyone/styles"
 )
 
 func renderResult(m Model) string {
-	tableView := renderTable(Model{
-		width:        m.width,
-		height:       m.height,
-		screen:       ScreenTable,
-		game:         m.game,
-		anim:         m.anim,
-		roundCount:   m.roundCount,
-		buttonAreas:  m.buttonAreas,
-	})
+	styles.EnsureInit()
 
+	tableStr := renderTable(m)
 	overlay := renderResultOverlay(m)
 	content := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 
-	return tableView + "\n" + content
+	return tableStr + "\n" + content
 }
 
 func renderResultOverlay(m Model) string {
@@ -105,13 +99,13 @@ func getResultHeader(m Model) string {
 	}
 
 	if allLose {
-		return "\033[31mYOU LOSE\033[0m"
+		return styles.GetDangerStyle().Render("YOU LOSE")
 	}
 	if allPush {
 		return "PUSH"
 	}
 	if anyWin || anyBlackjack {
-		return "\033[32m🏆 YOU WIN!\033[0m"
+		return styles.GetSuccessStyle().Render("🏆 YOU WIN!")
 	}
 	return "ROUND OVER"
 }

@@ -19,6 +19,8 @@ const (
 )
 
 func renderWelcome(m Model) string {
+	styles.EnsureInit()
+
 	lines := []string{
 		"",
 		"",
@@ -45,10 +47,11 @@ func renderWelcome(m Model) string {
 		content += strings.Repeat(" ", padding) + line + "\n"
 	}
 
-	return styles.StyleBackground.Render(content)
+	return styles.GetStyleBackground().Render(content)
 }
 
 func renderTooSmall(m Model) string {
+	styles.EnsureInit()
 	content := fmt.Sprintf("Terminal too small.\nMinimum: %d × %d\nCurrent: %d × %d\n\nPlease resize your terminal.", styles.MinTermWidth, styles.MinTermHeight, m.width, m.height)
 	return renderModal(content, 50)
 }

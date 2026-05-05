@@ -12,23 +12,21 @@ import (
 )
 
 type Model struct {
-	width        int
-	height       int
-	screen       Screen
-	game         *game.Game
-	betInput     textinput.Model
-	currentBet   int
-	minBet       int
-	maxBet       int
-	noSplash     bool
-	anim         *anim.Manager
-	reshuffling  bool
-	roundCount   int
-	buttonAreas  []ButtonArea
-	sessionStart int
-	balance      int
-	resultFlash  bool
-	resultTicks  int
+	width       int
+	height      int
+	screen      Screen
+	game        *game.Game
+	betInput    textinput.Model
+	currentBet  int
+	minBet      int
+	maxBet      int
+	noSplash    bool
+	anim        *anim.Manager
+	reshuffling bool
+	roundCount  int
+	buttonAreas []ButtonArea
+	resultFlash bool
+	resultTicks int
 }
 
 type ButtonArea struct {
@@ -61,24 +59,23 @@ func New(startBalance, minBet, maxBet int, noSplash bool) *Model {
 	ti.Focus()
 	ti.Placeholder = fmt.Sprintf("$%d", min(minBet, startBalance))
 	ti.Width = 20
+	ti.SetValue(fmt.Sprintf("%d", min(minBet, startBalance)))
 
 	g := game.NewGame(startBalance)
 
 	m := &Model{
-		width:        80,
-		height:       24,
-		screen:       ScreenWelcome,
-		game:         g,
-		betInput:     ti,
-		currentBet:   min(minBet, startBalance),
-		minBet:       minBet,
-		maxBet:       maxBet,
-		noSplash:     noSplash,
-		anim:         anim.NewManager(),
-		reshuffling:  false,
-		roundCount:   0,
-		sessionStart: startBalance,
-		balance:      startBalance,
+		width:       80,
+		height:      24,
+		screen:      ScreenWelcome,
+		game:        g,
+		betInput:    ti,
+		currentBet:  min(minBet, startBalance),
+		minBet:      minBet,
+		maxBet:      maxBet,
+		noSplash:    noSplash,
+		anim:        anim.NewManager(),
+		reshuffling: false,
+		roundCount:  0,
 	}
 
 	if noSplash {
@@ -89,12 +86,18 @@ func New(startBalance, minBet, maxBet int, noSplash bool) *Model {
 }
 
 func (m *Model) Init() tea.Cmd {
+	styles.EnsureInit()
+	if m.noSplash {
+		return nil
+	}
 	return tea.Tick(time.Second+time.Millisecond*500, func(time.Time) tea.Msg {
 		return StartRoundMsg{}
 	})
 }
 
 func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	m.buttonAreas = nil
+
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -107,6 +110,9 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		return m.handleKeyMsg(msg)
 
+	case tea.MouseMsg:
+		return m.handleMouseMsg(msg)
+
 	case AnimTickMsg:
 		expired := m.anim.Tick()
 		for _, id := range expired {
@@ -117,12 +123,11 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if m.resultFlash && m.resultTicks > 0 {
 			m.resultTicks--
 		}
-		return m, nil
+		return m, tea.Tick(150*time.Millisecond, func(t time.Time) tea.Msg { return AnimTickMsg{} })
 
 	case StartRoundMsg:
 		if m.screen == ScreenWelcome {
 			m.screen = ScreenBet
-			return m, nil
 		}
 		return m, nil
 
@@ -135,12 +140,10 @@ func (m *Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case ResolveRoundMsg:
 		m.game.Resolve()
 		m.screen = ScreenResult
-		m.anim.Trigger("result", 2)
+		m.anim.Trigger("result", 3)
 		m.resultFlash = true
-		m.resultTicks = 2
-		return m, tea.Batch(
-			tea.Tick(150*time.Millisecond, func(t time.Time) tea.Msg { return AnimTickMsg{} }),
-		)
+		m.resultTicks = 3
+		return m, tea.Tick(150*time.Millisecond, func(t time.Time) tea.Msg { return AnimTickMsg{} })
 	}
 
 	return m, nil
@@ -180,24 +183,24 @@ func (m *Model) handleBetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		m.screen = ScreenSummary
 		return m, nil
 	case tea.KeyEnter:
-		if m.currentBet >= m.minBet && m.currentBet <= m.balance {
+		if m.currentBet >= m.minBet && m.currentBet <= m.game.Balance {
 			return m.startRound()
 		}
 		return m, nil
 	case tea.KeyLeft:
-		m.currentBet = adjustBet(m.currentBet, -25, m.minBet, m.maxBet, m.balance)
+		m.currentBet = adjustBet(m.currentBet, -25, m.minBet, m.maxBet, m.game.Balance)
 		m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		return m, nil
 	case tea.KeyRight:
-		m.currentBet = adjustBet(m.currentBet, 25, m.minBet, m.maxBet, m.balance)
+		m.currentBet = adjustBet(m.currentBet, 25, m.minBet, m.maxBet, m.game.Balance)
 		m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		return m, nil
 	case tea.KeyUp:
-		m.currentBet = adjustBet(m.currentBet, 5, m.minBet, m.maxBet, m.balance)
+		m.currentBet = adjustBet(m.currentBet, 5, m.minBet, m.maxBet, m.game.Balance)
 		m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		return m, nil
 	case tea.KeyDown:
-		m.currentBet = adjustBet(m.currentBet, -5, m.minBet, m.maxBet, m.balance)
+		m.currentBet = adjustBet(m.currentBet, -5, m.minBet, m.maxBet, m.game.Balance)
 		m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		return m, nil
 	case tea.KeyBackspace:
@@ -209,7 +212,7 @@ func (m *Model) handleBetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 		var newBet int
 		fmt.Sscanf(currentStr, "%d", &newBet)
-		m.currentBet = adjustBet(newBet, 0, m.minBet, m.maxBet, m.balance)
+		m.currentBet = adjustBet(newBet, 0, m.minBet, m.maxBet, m.game.Balance)
 		m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		return m, nil
 	case tea.KeyRunes:
@@ -223,7 +226,7 @@ func (m *Model) handleBetKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			}
 			var newBet int
 			fmt.Sscanf(currentStr, "%d", &newBet)
-			m.currentBet = adjustBet(newBet, 0, m.minBet, m.maxBet, m.balance)
+			m.currentBet = adjustBet(newBet, 0, m.minBet, m.maxBet, m.game.Balance)
 			m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
 		}
 		return m, nil
@@ -245,6 +248,19 @@ func (m *Model) handleTableKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 	if msg.Type == tea.KeyRunes && (msg.Runes[0] == 'q' || msg.Runes[0] == 'Q') {
 		m.screen = ScreenSummary
+		return m, nil
+	}
+
+	if m.game.State == game.GameInsurance {
+		if msg.Type == tea.KeyRunes {
+			r := msg.Runes[0]
+			if r == 'y' || r == 'Y' {
+				return m.handleInsurance(true)
+			}
+			if r == 'n' || r == 'N' {
+				return m.handleInsurance(false)
+			}
+		}
 		return m, nil
 	}
 
@@ -295,8 +311,41 @@ func (m *Model) handleResultKey(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handleMouseMsg(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	x, y := msg.X, msg.Y
+
+	switch m.screen {
+	case ScreenBet:
+		if y >= m.height-3 && y <= m.height-1 {
+			if x >= 14 && x <= 26 {
+				m.currentBet = adjustBet(m.currentBet, -25, m.minBet, m.maxBet, m.game.Balance)
+				m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
+			} else if x >= 28 && x <= 40 {
+				m.currentBet = adjustBet(m.currentBet, -5, m.minBet, m.maxBet, m.game.Balance)
+				m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
+			} else if x >= 42 && x <= 54 {
+				m.currentBet = adjustBet(m.currentBet, 5, m.minBet, m.maxBet, m.game.Balance)
+				m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
+			} else if x >= 56 && x <= 68 {
+				m.currentBet = adjustBet(m.currentBet, 25, m.minBet, m.maxBet, m.game.Balance)
+				m.betInput.SetValue(fmt.Sprintf("%d", m.currentBet))
+			}
+		}
+	}
+
+	return m, nil
+}
+
 func (m *Model) applyPlayerAction(a game.Action) (tea.Model, tea.Cmd) {
+	handIdx := m.game.ActiveHandIdx
+	cardCount := len(m.game.PlayerHands[handIdx].Cards)
+
 	m.game.ApplyAction(a)
+
+	if a == game.ActionHit || a == game.ActionDouble || a == game.ActionSplit {
+		flashID := fmt.Sprintf("player-%d-%d", handIdx, cardCount)
+		m.anim.Trigger(anim.FlashID(flashID), 2)
+	}
 
 	if m.game.State == game.GameDealerTurn {
 		return m, tea.Tick(400*time.Millisecond, func(t time.Time) tea.Msg { return DealerTickMsg{} })
@@ -310,9 +359,43 @@ func (m *Model) applyPlayerAction(a game.Action) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *Model) handleInsurance(accept bool) (tea.Model, tea.Cmd) {
+	if accept {
+		m.game.ApplyAction(game.ActionInsuranceYes)
+	} else {
+		m.game.ApplyAction(game.ActionInsuranceNo)
+	}
+
+	if m.game.State == game.GameCheckBJ {
+		m.checkBlackjack()
+	}
+
+	if m.game.State == game.GamePlayerTurn {
+		return m, nil
+	}
+
+	if m.game.State == game.GameDone {
+		cmd := tea.Tick(time.Millisecond, func(t time.Time) tea.Msg { return ResolveRoundMsg{} })
+		return m, cmd
+	}
+
+	return m, nil
+}
+
 func (m *Model) handleDealNextCard() (tea.Model, tea.Cmd) {
+	playerCardCount := len(m.game.PlayerHands[0].Cards)
+	dealerCardCount := len(m.game.DealerHand.Cards)
+
 	hasMore := m.game.PopDealStep()
+
 	if hasMore {
+		if len(m.game.PlayerHands) > 0 && len(m.game.PlayerHands[0].Cards) > playerCardCount {
+			flashID := fmt.Sprintf("player-0-%d", len(m.game.PlayerHands[0].Cards)-1)
+			m.anim.Trigger(anim.FlashID(flashID), 2)
+		} else if len(m.game.DealerHand.Cards) > dealerCardCount {
+			flashID := fmt.Sprintf("dealer-%d", len(m.game.DealerHand.Cards)-1)
+			m.anim.Trigger(anim.FlashID(flashID), 2)
+		}
 		return m, tea.Batch(
 			tea.Tick(120*time.Millisecond, func(t time.Time) tea.Msg { return AnimTickMsg{} }),
 			tea.Tick(120*time.Millisecond, func(t time.Time) tea.Msg { return DealNextCardMsg{} }),
@@ -329,7 +412,15 @@ func (m *Model) handleDealNextCard() (tea.Model, tea.Cmd) {
 }
 
 func (m *Model) handleDealerTick() (tea.Model, tea.Cmd) {
+	dealerCardCount := len(m.game.DealerHand.Cards)
+
 	hasMore := m.game.DealerPlay()
+
+	if hasMore && len(m.game.DealerHand.Cards) > dealerCardCount {
+		flashID := fmt.Sprintf("dealer-%d", len(m.game.DealerHand.Cards)-1)
+		m.anim.Trigger(anim.FlashID(flashID), 2)
+	}
+
 	if hasMore {
 		return m, tea.Tick(400*time.Millisecond, func(t time.Time) tea.Msg { return DealerTickMsg{} })
 	}
@@ -345,15 +436,23 @@ func (m *Model) checkBlackjack() {
 		}
 		if m.game.PlayerHands[0].IsBlackjack() {
 			m.game.Balance += m.game.CurrentBet
+			m.game.Results = []game.HandResult{
+				{
+					Hand:   m.game.PlayerHands[0],
+					Result: game.ResultPush,
+					Profit: 0,
+				},
+			}
+		} else {
+			m.game.Results = []game.HandResult{
+				{
+					Hand:   m.game.PlayerHands[0],
+					Result: game.ResultLose,
+					Profit: -m.game.CurrentBet,
+				},
+			}
 		}
 		m.game.State = game.GameDone
-		m.game.Results = []game.HandResult{
-			{
-				Hand:   m.game.PlayerHands[0],
-				Result: game.ResultPush,
-				Profit: 0,
-			},
-		}
 	} else {
 		if m.game.PlayerHands[0].IsBlackjack() {
 			profit := int(float64(m.game.CurrentBet) * 1.5)
@@ -376,15 +475,19 @@ func (m *Model) startRound() (tea.Model, tea.Cmd) {
 	m.roundCount++
 	m.game.StartRound(m.currentBet)
 	m.screen = ScreenTable
-	return m, tea.Batch(
-		tea.Tick(800*time.Millisecond, func(t time.Time) tea.Msg { return DealNextCardMsg{} }),
-	)
+
+	flashID := "dealer-0"
+	m.anim.Trigger(anim.FlashID(flashID), 2)
+
+	return m, tea.Tick(400*time.Millisecond, func(t time.Time) tea.Msg { return DealNextCardMsg{} })
 }
 
 func (m *Model) View() string {
 	if m.width < styles.MinTermWidth || m.height < styles.MinTermHeight {
 		return renderTooSmall(*m)
 	}
+
+	styles.EnsureInit()
 
 	switch m.screen {
 	case ScreenWelcome:

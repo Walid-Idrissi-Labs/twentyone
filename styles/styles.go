@@ -7,19 +7,25 @@ import (
 var (
 	ColorBackground lipgloss.Color
 	ColorSurface    lipgloss.Color
-	ColorBorder    lipgloss.Color
-	ColorText      lipgloss.Color
-	ColorSubtle    lipgloss.Color
-	ColorAccent    lipgloss.Color
-	ColorSuccess   lipgloss.Color
-	ColorDanger    lipgloss.Color
-	ColorWarning   lipgloss.Color
-	ColorRed       lipgloss.Color
-	ColorNeutral   lipgloss.Color
+	ColorBorder     lipgloss.Color
+	ColorText       lipgloss.Color
+	ColorSubtle     lipgloss.Color
+	ColorAccent     lipgloss.Color
+	ColorSuccess    lipgloss.Color
+	ColorDanger     lipgloss.Color
+	ColorWarning    lipgloss.Color
+	ColorRed        lipgloss.Color
+	ColorNeutral    lipgloss.Color
 )
 
-func init() {
+var initialized = false
+
+func EnsureInit() {
+	if initialized {
+		return
+	}
 	InitializeColors()
+	initialized = true
 }
 
 func InitializeColors() {
@@ -48,118 +54,119 @@ func InitializeColors() {
 		ColorRed = lipgloss.Color("#DC2626")
 		ColorNeutral = lipgloss.Color("#64748B")
 	}
+	initialized = true
 }
 
-var (
-	StyleBackground = lipgloss.NewStyle().
-			Background(ColorBackground)
+func GetStyleBackground() lipgloss.Style {
+	EnsureInit()
+	return lipgloss.NewStyle().
+		Background(ColorBackground)
+}
 
-	StyleSurface = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorText)
+func GetHUDStyle() lipgloss.Style {
+	EnsureInit()
+	return lipgloss.NewStyle().
+		Background(ColorSurface).
+		Foreground(ColorText)
+}
 
-	StyleBorder = lipgloss.NewStyle().
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(ColorBorder)
-
-	StyleTitle = lipgloss.NewStyle().
-			Foreground(ColorText).
-			Bold(true)
-
-	StyleSubtle = lipgloss.NewStyle().
-			Foreground(ColorSubtle)
-
-	StyleAccent = lipgloss.NewStyle().
-			Foreground(ColorAccent).
-			Bold(true)
-
-	StyleSuccess = lipgloss.NewStyle().
-			Foreground(ColorSuccess).
-			Bold(true)
-
-	StyleDanger = lipgloss.NewStyle().
-			Foreground(ColorDanger).
-			Bold(true)
-
-	StyleWarning = lipgloss.NewStyle().
-			Foreground(ColorWarning)
-
-	HUDStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorText)
-
-	CardStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorBorder)
-
-	CardHighlightedStyle = lipgloss.NewStyle().
+func GetCardStyle(red, highlighted, dimmed bool) lipgloss.Style {
+	EnsureInit()
+	var style lipgloss.Style
+	if red {
+		if highlighted {
+			style = lipgloss.NewStyle().
 				Background(ColorSurface).
+				Foreground(ColorRed).
 				Border(lipgloss.NormalBorder()).
 				BorderForeground(ColorAccent)
-
-	CardDimmedStyle = lipgloss.NewStyle().
+		} else {
+			style = lipgloss.NewStyle().
+				Background(ColorSurface).
+				Foreground(ColorRed).
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(ColorBorder)
+		}
+	} else {
+		if highlighted {
+			style = lipgloss.NewStyle().
+				Background(ColorSurface).
+				Foreground(ColorText).
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(ColorAccent)
+		} else {
+			style = lipgloss.NewStyle().
+				Background(ColorSurface).
+				Foreground(ColorText).
+				Border(lipgloss.NormalBorder()).
+				BorderForeground(ColorBorder)
+		}
+	}
+	if dimmed {
+		style = lipgloss.NewStyle().
 			Background(ColorSurface).
 			Foreground(ColorSubtle).
 			Border(lipgloss.NormalBorder()).
 			BorderForeground(ColorSubtle)
+	}
+	return style
+}
 
-	ButtonStyle = lipgloss.NewStyle().
+func GetButtonStyle(disabled, focused bool) lipgloss.Style {
+	EnsureInit()
+	var style lipgloss.Style
+	if disabled {
+		style = lipgloss.NewStyle().
+			Padding(0, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorBorder).
+			Foreground(ColorSubtle)
+	} else if focused {
+		style = lipgloss.NewStyle().
+			Padding(0, 2).
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(ColorAccent).
+			Foreground(ColorAccent).
+			Bold(true)
+	} else {
+		style = lipgloss.NewStyle().
 			Padding(0, 2).
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(ColorBorder).
 			Foreground(ColorText)
+	}
+	return style
+}
 
-	ButtonFocusedStyle = lipgloss.NewStyle().
-				Padding(0, 2).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(ColorAccent).
-				Foreground(ColorAccent).
-				Bold(true)
+func GetModalStyle() lipgloss.Style {
+	EnsureInit()
+	return lipgloss.NewStyle().
+		Background(ColorSurface).
+		Border(lipgloss.RoundedBorder()).
+		BorderForeground(ColorAccent).
+		Padding(1, 2)
+}
 
-	ButtonDisabledStyle = lipgloss.NewStyle().
-				Padding(0, 2).
-				Border(lipgloss.RoundedBorder()).
-				BorderForeground(ColorBorder).
-				Foreground(ColorSubtle)
+func GetSuccessStyle() lipgloss.Style {
+	EnsureInit()
+	return lipgloss.NewStyle().
+		Foreground(ColorSuccess).
+		Bold(true)
+}
 
-	ModalStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Border(lipgloss.RoundedBorder()).
-			BorderForeground(ColorAccent).
-			Padding(1, 2)
-
-	RedCardStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorRed).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorBorder)
-
-	BlackCardStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorText).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorBorder)
-
-	RedCardHighlightedStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorRed).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorAccent)
-
-	BlackCardHighlightedStyle = lipgloss.NewStyle().
-			Background(ColorSurface).
-			Foreground(ColorText).
-			Border(lipgloss.NormalBorder()).
-			BorderForeground(ColorAccent)
-)
+func GetDangerStyle() lipgloss.Style {
+	EnsureInit()
+	return lipgloss.NewStyle().
+		Foreground(ColorDanger).
+		Bold(true)
+}
 
 const (
-	HUDHeight       = 1
+	HUDHeight      = 1
 	ActionBarHeight = 3
-	CardWidth       = 5
-	CardHeight      = 5
-	CardGap         = 1
-	MinTermWidth    = 80
-	MinTermHeight   = 24
+	CardWidth      = 5
+	CardHeight     = 5
+	CardGap        = 1
+	MinTermWidth   = 80
+	MinTermHeight  = 24
 )

@@ -4,33 +4,13 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/twentyone/twentyone/game"
 	"github.com/twentyone/twentyone/styles"
 )
 
 func renderCard(c game.Card, highlighted bool, dimmed bool) string {
-	var cardStyle lipgloss.Style
-	if c.IsRedSuit() {
-		if highlighted {
-			cardStyle = styles.RedCardHighlightedStyle
-		} else {
-			cardStyle = styles.RedCardStyle
-		}
-	} else {
-		if highlighted {
-			cardStyle = styles.BlackCardHighlightedStyle
-		} else {
-			cardStyle = styles.BlackCardStyle
-		}
-	}
-
-	if dimmed {
-		cardStyle = styles.CardDimmedStyle
-	}
-
 	if !c.FaceUp {
-		return cardStyle.Render(
+		return styles.GetCardStyle(c.IsRedSuit(), highlighted, dimmed).Render(
 			fmt.Sprintf("┌───┐\n│▓▓▓│\n│▓▓▓│\n│▓▓▓│\n└───┘"),
 		)
 	}
@@ -46,17 +26,11 @@ func renderCard(c game.Card, highlighted bool, dimmed bool) string {
 	}
 
 	joined := strings.Join(lines, "\n")
-	return cardStyle.Render(joined)
+	return styles.GetCardStyle(c.IsRedSuit(), highlighted, dimmed).Render(joined)
 }
 
 func renderButton(label string, shortcut string, focused bool, disabled bool) string {
-	if disabled {
-		return styles.ButtonDisabledStyle.Render(fmt.Sprintf("%s %s", label, shortcut))
-	}
-	if focused {
-		return styles.ButtonFocusedStyle.Render(fmt.Sprintf("%s %s", label, shortcut))
-	}
-	return styles.ButtonStyle.Render(fmt.Sprintf("%s %s", label, shortcut))
+	return styles.GetButtonStyle(disabled, focused).Render(fmt.Sprintf("%s %s", label, shortcut))
 }
 
 func renderModal(content string, width int) string {
@@ -83,7 +57,7 @@ func renderModal(content string, width int) string {
 	}
 	result += bottomBorder
 
-	return result
+	return styles.GetModalStyle().Render(result)
 }
 
 func stripAnsi(s string) string {

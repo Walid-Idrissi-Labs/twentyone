@@ -8,10 +8,14 @@ import (
 )
 
 func renderSummary(m Model) string {
+	styles.EnsureInit()
+
 	startingBalance := m.game.SessionStart
 	finalBalance := m.game.Balance
 	netProfit := finalBalance - startingBalance
 	roundsPlayed := m.roundCount
+
+	profitStr := formatProfit(netProfit)
 
 	lines := []string{
 		"",
@@ -21,7 +25,7 @@ func renderSummary(m Model) string {
 		fmt.Sprintf("           Starting balance:    $%d                   ", startingBalance),
 		fmt.Sprintf("           Final balance:       $%d                   ", finalBalance),
 		"           ─────────────────────────────                 ",
-		fmt.Sprintf("           Net profit:          %s", formatProfit(netProfit)),
+		fmt.Sprintf("           Net profit:          %s", profitStr),
 		"",
 		fmt.Sprintf("           Rounds played:       %d                       ", roundsPlayed),
 		"",
@@ -32,5 +36,5 @@ func renderSummary(m Model) string {
 	}
 
 	joined := strings.Join(lines, "\n")
-	return styles.StyleBackground.Render(joined)
+	return styles.GetStyleBackground().Render(joined)
 }

@@ -13,18 +13,15 @@ import (
 func renderTable(m Model) string {
 	var sb strings.Builder
 	sb.WriteString(renderHUD(m))
-	sb.WriteString("\n")
-	sb.WriteString("\n")
+	sb.WriteString("\n\n")
 	sb.WriteString(renderDealerArea(m))
-	sb.WriteString("\n")
-	sb.WriteString("\n")
+	sb.WriteString("\n\n")
 	sb.WriteString(renderPlayerArea(m))
-	sb.WriteString("\n")
-	sb.WriteString("\n")
+	sb.WriteString("\n\n")
 	sb.WriteString(renderActionBar(m))
 
 	bg := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Top, sb.String())
-	return styles.StyleBackground.Render(bg)
+	return styles.GetStyleBackground().Render(bg)
 }
 
 func renderHUD(m Model) string {
@@ -52,7 +49,7 @@ func renderHUD(m Model) string {
 	center := strings.Repeat(" ", centerPadding) + "twentyone"
 	right := shoeStr + "    " + roundStr
 
-	return styles.HUDStyle.Render(left + center + right)
+	return styles.GetHUDStyle().Render(left + center + right)
 }
 
 func renderDealerArea(m Model) string {
@@ -67,8 +64,7 @@ func renderDealerArea(m Model) string {
 			sb.WriteString(fmt.Sprintf("                                           Score: ?"))
 		}
 	}
-	sb.WriteString("\n")
-	sb.WriteString("\n")
+	sb.WriteString("\n\n")
 
 	cards := make([]string, 0)
 	for i, c := range hand.Cards {
@@ -102,6 +98,10 @@ func renderPlayerArea(m Model) string {
 	hands := m.game.PlayerHands
 	activeIdx := m.game.ActiveHandIdx
 
+	if len(hands) == 0 {
+		return sb.String()
+	}
+
 	if len(hands) == 1 {
 		hand := hands[0]
 		active := m.game.State == game.GamePlayerTurn && activeIdx == 0
@@ -110,8 +110,7 @@ func renderPlayerArea(m Model) string {
 		if len(hand.Cards) > 0 {
 			sb.WriteString(fmt.Sprintf("                                           Score: %s", hand.ScoreString()))
 		}
-		sb.WriteString("\n")
-		sb.WriteString("\n")
+		sb.WriteString("\n\n")
 
 		cards := make([]string, 0)
 		for i, c := range hand.Cards {
@@ -135,8 +134,7 @@ func renderPlayerArea(m Model) string {
 			sb.WriteString(line + "\n")
 		}
 	} else {
-		sb.WriteString(fmt.Sprintf("  YOU\n"))
-		sb.WriteString("\n")
+		sb.WriteString(fmt.Sprintf("  YOU\n\n"))
 
 		handLines := make([][]string, len(hands))
 		for hIdx, hand := range hands {
@@ -171,9 +169,11 @@ func renderPlayerArea(m Model) string {
 						prefix = "▶ "
 					}
 					hand := hands[hIdx]
-					line += fmt.Sprintf("%sHand %d $%d   %s", prefix, hIdx+1, hand.Bet, hand.ScoreString())
-					for i := 0; i < maxCards*6-len(fmt.Sprintf("Hand %d $%d   %s", hIdx+1, hands[hIdx].Bet, hand.ScoreString())); i++ {
-						line += " "
+					handInfo := fmt.Sprintf("%sHand %d $%d   %s", prefix, hIdx+1, hand.Bet, hand.ScoreString())
+					line += handInfo
+					spaceNeeded := 40 - len(handInfo)
+					if spaceNeeded > 0 {
+						line += strings.Repeat(" ", spaceNeeded)
 					}
 				} else if row-1 < len(cards) {
 					cardLines := strings.Split(cards[row-1], "\n")
@@ -193,20 +193,20 @@ func renderActionBar(m Model) string {
 	state := m.game.State
 
 	if state == game.GameDealing {
-		return styles.HUDStyle.Render("  Dealing…")
+		return styles.GetHUDStyle().Render("  Dealing…")
 	}
 
 	if state == game.GameInsurance {
-		return styles.HUDStyle.Render("  Insurance offered.   [ Take  Y ]   [ Decline  N ]")
+		return styles.GetHUDStyle().Render("  Insurance offered.   [ Take  Y ]   [ Decline  N ]")
 	}
 
 	if state == game.GameDealerTurn {
-		return styles.HUDStyle.Render("  Dealer playing…")
+		return styles.GetHUDStyle().Render("  Dealer playing…")
 	}
 
 	actions := m.game.AvailableActions()
 	if len(actions) == 0 {
-		return styles.HUDStyle.Render("")
+		return styles.GetHUDStyle().Render("")
 	}
 
 	var sb strings.Builder
@@ -224,5 +224,5 @@ func renderActionBar(m Model) string {
 		}
 	}
 
-	return styles.HUDStyle.Render(sb.String())
+	return styles.GetHUDStyle().Render(sb.String())
 }
