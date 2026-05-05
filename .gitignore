@@ -1,3 +1,9 @@
 twentyone.md
 AGENTS.md
 opencode.json
+twentyone
+twentyone-*
+*.exe
+*.dmg
+*.deb
+*.rpm
