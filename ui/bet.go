@@ -12,44 +12,37 @@ func renderBet(m Model) string {
 	styles.EnsureInit()
 
 	hud := renderBetHUD(m)
-	balance := m.game.Balance
 
 	content := strings.Builder{}
 	content.WriteString(hud)
 	content.WriteString("\n\n")
 	content.WriteString("                    Place Your Bet\n\n")
-	content.WriteString("                   ┌────────────┐\n")
-	content.WriteString(fmt.Sprintf("                   │  $%-10s│\n", m.betInput.Value))
-	content.WriteString("                   └────────────┘\n\n")
 
 	minDisplay := m.minBet
 	maxDisplay := m.maxBet
 	if maxDisplay == 0 {
-		maxDisplay = balance
+		maxDisplay = m.game.Balance
 	}
-	content.WriteString(fmt.Sprintf("          Min: $%d          Max: $%d\n\n", minDisplay, maxDisplay))
 
-	content.WriteString("    [ - $25 ]  [ - $5 ]  [ + $5 ]  [ + $25 ]\n\n")
+	content.WriteString(fmt.Sprintf("                   Min: $%d  Max: $%d\n\n", minDisplay, maxDisplay))
 
-	dealEnabled := m.currentBet >= m.minBet && m.currentBet <= balance && m.currentBet <= balance
-	dealBtn := renderButton("Deal", "↵", false, !dealEnabled)
-	content.WriteString(fmt.Sprintf("              %s\n\n", dealBtn))
-
+	dealEnabled := m.currentBet >= m.minBet && m.currentBet <= m.game.Balance
+	dealBtn := renderButton("Deal", "Enter", false, !dealEnabled)
 	quitBtn := renderButton("Quit", "Q", false, false)
-	content.WriteString(fmt.Sprintf("              %s\n", quitBtn))
 
-	bg := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content.String())
-	return styles.GetStyleBackground().Render(bg)
+	content.WriteString(fmt.Sprintf("                   %s\n\n", dealBtn))
+	content.WriteString(fmt.Sprintf("                   %s\n", quitBtn))
+
+	placed := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, content.String())
+	return styles.StyleBackground.Render(placed)
 }
 
 func renderBetHUD(m Model) string {
 	balanceStr := fmt.Sprintf("Balance: $%d", m.game.Balance)
 	roundStr := fmt.Sprintf("Round %d", m.roundCount+1)
 
-	left := balanceStr
-	center := "twentyone"
-	right := roundStr
-
-	bar := fmt.Sprintf("%s    %s    %s", left, center, right)
-	return styles.GetHUDStyle().Render(bar)
+	return lipgloss.NewStyle().
+		Background(styles.ColorSurface).
+		Foreground(styles.ColorText).
+		Render(fmt.Sprintf("%s              twentyone              %s", balanceStr, roundStr))
 }

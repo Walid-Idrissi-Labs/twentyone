@@ -4,98 +4,126 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/twentyone/twentyone/game"
 	"github.com/twentyone/twentyone/styles"
 )
 
 func renderCard(c game.Card, highlighted bool, dimmed bool) string {
+	var style lipgloss.Style
+
 	if !c.FaceUp {
-		return styles.GetCardStyle(c.IsRedSuit(), highlighted, dimmed).Render(
-			fmt.Sprintf("┌───┐\n│▓▓▓│\n│▓▓▓│\n│▓▓▓│\n└───┘"),
-		)
+		style = styles.StyleCard
+		if dimmed {
+			style = styles.StyleCardDimmed
+		}
+		return style.Render("┌───┐\n│▓▓▓│\n│▓▓▓│\n│▓▓▓│\n└───┘")
+	}
+
+	if c.IsRedSuit() {
+		if highlighted {
+			style = styles.StyleCardRedHighlighted
+		} else {
+			style = styles.StyleCardRed
+		}
+	} else {
+		if highlighted {
+			style = styles.StyleCardHighlighted
+		} else {
+			style = styles.StyleCard
+		}
+	}
+
+	if dimmed {
+		style = styles.StyleCardDimmed
 	}
 
 	rank := c.RankString()
-	suitSymbol := c.SuitSymbol()
+	suit := c.SuitSymbol()
 
-	lines := []string{
-		"┌───┐",
-		fmt.Sprintf("│ %s │", rank),
-		fmt.Sprintf("│ %s │", suitSymbol),
-		"└───┘",
-	}
-
-	joined := strings.Join(lines, "\n")
-	return styles.GetCardStyle(c.IsRedSuit(), highlighted, dimmed).Render(joined)
+	return style.Render(fmt.Sprintf("┌───┐\n│ %s │\n│ %s │\n└───┘", rank, suit))
 }
 
-func renderButton(label string, shortcut string, focused bool, disabled bool) string {
-	return styles.GetButtonStyle(disabled, focused).Render(fmt.Sprintf("%s %s", label, shortcut))
+func renderButton(label, shortcut string, focused, disabled bool) string {
+	if disabled {
+		return styles.StyleButtonDisabled.Render(fmt.Sprintf("%s %s", label, shortcut))
+	}
+	if focused {
+		return styles.StyleButtonFocused.Render(fmt.Sprintf("%s %s", label, shortcut))
+	}
+	return styles.StyleButton.Render(fmt.Sprintf("%s %s", label, shortcut))
 }
 
 func renderModal(content string, width int) string {
 	lines := strings.Split(content, "\n")
 	maxLen := 0
 	for _, line := range lines {
-		l := stripAnsi(line)
-		if len(l) > maxLen {
-			maxLen = len(l)
+		if len(line) > maxLen {
+			maxLen = len(line)
 		}
 	}
 
-	borderWidth := maxLen + 4
-	topBorder := "┌" + strings.Repeat("─", borderWidth-2) + "┐"
-	bottomBorder := "└" + strings.Repeat("─", borderWidth-2) + "┘"
+	if width > maxLen {
+		width = maxLen
+	}
 
-	result := topBorder + "\n"
+	innerWidth := width - 4
+	topBorder := "┌" + strings.Repeat("─", innerWidth) + "┐"
+	botBorder := "└" + strings.Repeat("─", innerWidth) + "┘"
+
+	var b strings.Builder
+	b.WriteString(topBorder + "\n")
 	for _, line := range lines {
-		l := stripAnsi(line)
-		padding := borderWidth - 2 - len(l)
+		padding := innerWidth - len(line)
+		if padding < 0 {
+			padding = 0
+		}
 		leftPad := padding / 2
 		rightPad := padding - leftPad
-		result += "│" + strings.Repeat(" ", leftPad) + line + strings.Repeat(" ", rightPad) + "│\n"
+		b.WriteString("│")
+		b.WriteString(strings.Repeat(" ", leftPad))
+		b.WriteString(line)
+		b.WriteString(strings.Repeat(" ", rightPad))
+		b.WriteString("│\n")
 	}
-	result += bottomBorder
+	b.WriteString(botBorder)
 
-	return styles.GetModalStyle().Render(result)
+	return styles.StyleModal.Render(b.String())
 }
 
-func stripAnsi(s string) string {
-	var result strings.Builder
-	inEscape := false
-	for _, r := range s {
-		if r == '\033' {
-			inEscape = true
-			continue
-		}
-		if inEscape && r == 'm' {
-			inEscape = false
-			continue
-		}
-		if !inEscape {
-			result.WriteRune(r)
+func renderBox(content string, width int) string {
+	lines := strings.Split(content, "\n")
+	maxLen := 0
+	for _, line := range lines {
+		if len(line) > maxLen {
+			maxLen = len(line)
 		}
 	}
-	return result.String()
-}
 
-func formatMoney(amount int, showSign bool) string {
-	sign := ""
-	if showSign && amount > 0 {
-		sign = "+"
+	if width > maxLen {
+		width = maxLen
 	}
-	return fmt.Sprintf("%s$%d", sign, amount)
-}
 
-func formatBalance(amount int) string {
-	return fmt.Sprintf("$%d", amount)
-}
+	innerWidth := width - 4
+	topBorder := "┌" + strings.Repeat("─", innerWidth) + "┐"
+	botBorder := "└" + strings.Repeat("─", innerWidth) + "┘"
 
-func formatProfit(amount int) string {
-	if amount > 0 {
-		return fmt.Sprintf("+$%d ▲", amount)
-	} else if amount < 0 {
-		return fmt.Sprintf("-$%d ▼", -amount)
+	var b strings.Builder
+	b.WriteString(topBorder + "\n")
+	for _, line := range lines {
+		padding := innerWidth - len(line)
+		if padding < 0 {
+			padding = 0
+		}
+		leftPad := padding / 2
+		rightPad := padding - leftPad
+		b.WriteString("│")
+		b.WriteString(strings.Repeat(" ", leftPad))
+		b.WriteString(line)
+		b.WriteString(strings.Repeat(" ", rightPad))
+		b.WriteString("│\n")
 	}
-	return "$0  ="
+	b.WriteString(botBorder)
+
+	return b.String()
 }

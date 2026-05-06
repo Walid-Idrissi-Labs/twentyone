@@ -12,11 +12,19 @@ import (
 func renderResult(m Model) string {
 	styles.EnsureInit()
 
-	tableStr := renderTable(m)
+	tableView := renderTable(Model{
+		width:      m.width,
+		height:     m.height,
+		screen:     ScreenTable,
+		game:       m.game,
+		anim:       m.anim,
+		roundCount: m.roundCount,
+	})
+
 	overlay := renderResultOverlay(m)
 	content := lipgloss.Place(m.width, m.height, lipgloss.Center, lipgloss.Center, overlay)
 
-	return tableStr + "\n" + content
+	return tableView + "\n" + content
 }
 
 func renderResultOverlay(m Model) string {
@@ -28,7 +36,7 @@ func renderResultOverlay(m Model) string {
 	lines := []string{
 		"",
 		"",
-		"       " + header,
+		"  " + header,
 		"",
 	}
 
@@ -36,7 +44,7 @@ func renderResultOverlay(m Model) string {
 		handNum := i + 1
 		resultStr := getResultString(res.Result)
 		profitStr := formatProfitWithSign(res.Profit)
-		lines = append(lines, fmt.Sprintf("       Hand %d: %s   %s", handNum, profitStr, resultStr))
+		lines = append(lines, fmt.Sprintf("  Hand %d: %s   %s", handNum, profitStr, resultStr))
 	}
 
 	lines = append(lines, "")
@@ -45,32 +53,32 @@ func renderResultOverlay(m Model) string {
 	for _, res := range m.game.Results {
 		totalProfit += res.Profit
 	}
-	lines = append(lines, fmt.Sprintf("       Round profit: %s", formatProfitWithSign(totalProfit)))
-	lines = append(lines, fmt.Sprintf("       Balance: $%d", m.game.Balance))
+	lines = append(lines, fmt.Sprintf("  Round profit: %s", formatProfitWithSign(totalProfit)))
+	lines = append(lines, fmt.Sprintf("  Balance: $%d", m.game.Balance))
 	lines = append(lines, "")
 
 	if m.game.Balance > 0 {
-		lines = append(lines, "   [ Play Again  ↵ ]  [ Quit  Q ]")
+		lines = append(lines, "  [ Play Again  Enter ]  [ Quit  Q ]")
 	} else {
-		lines = append(lines, "                    [ Quit  Q ]")
+		lines = append(lines, "  [ Quit  Q ]")
 	}
 	lines = append(lines, "")
 
 	joined := strings.Join(lines, "\n")
-	return renderModal(joined, 60)
+	return renderModal(joined, 55)
 }
 
 func renderBrokeOverlay() string {
 	lines := []string{
 		"",
 		"",
-		"       Game Over — You're broke!",
+		"  Game Over - You're broke!",
 		"",
-		"                    [ Quit  Q ]",
+		"  [ Quit  Q ]",
 		"",
 	}
 	joined := strings.Join(lines, "\n")
-	return renderModal(joined, 50)
+	return renderModal(joined, 35)
 }
 
 func getResultHeader(m Model) string {
@@ -81,7 +89,6 @@ func getResultHeader(m Model) string {
 	allLose := true
 	allPush := true
 	anyWin := false
-	anyBlackjack := false
 
 	for _, res := range m.game.Results {
 		if res.Result != game.ResultLose {
@@ -93,19 +100,16 @@ func getResultHeader(m Model) string {
 		if res.Result == game.ResultWin || res.Result == game.ResultBlackjack {
 			anyWin = true
 		}
-		if res.Result == game.ResultBlackjack {
-			anyBlackjack = true
-		}
 	}
 
 	if allLose {
-		return styles.GetDangerStyle().Render("YOU LOSE")
+		return lipgloss.NewStyle().Foreground(styles.ColorDanger).Bold(true).Render("YOU LOSE")
 	}
 	if allPush {
-		return "PUSH"
+		return lipgloss.NewStyle().Foreground(styles.ColorNeutral).Render("PUSH")
 	}
-	if anyWin || anyBlackjack {
-		return styles.GetSuccessStyle().Render("🏆 YOU WIN!")
+	if anyWin {
+		return lipgloss.NewStyle().Foreground(styles.ColorSuccess).Bold(true).Render("YOU WIN!")
 	}
 	return "ROUND OVER"
 }
